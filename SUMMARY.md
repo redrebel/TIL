@@ -8,5 +8,4 @@
     * [MacOS-keymap](keymap/MacOS-keymap.md)
 * [Algorithms](Algorithms/readme.md)
 * Language
-  * java
     * [String](Language/java/String.md)
