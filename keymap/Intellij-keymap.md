@@ -1,3 +1,6 @@
+for MACOS
+
+alt + shift + up(down) : move line up(down)
 cmd + Y : delete line
 shift + cmd + N : find file
 
