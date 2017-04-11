@@ -28,5 +28,9 @@ http://stackoverflow.com/questions/18766780/stringbuilder-reset-or-create-a-new
 https://blog.outsider.ne.kr/265
 
 ### Object의 타입이 확실히 String 인걸 보장할때 .toString() 보다 (String) 캐스팅이 2배이상 빠르다.
+참고로 String.valueOf() 는 비추한다.   
+만일 Object 가 null 일 경우 to.String() 이나 (String) 은 null 에러를 발생시키지만
+String.valueOf() 은 "null" 을 반환하므로 잠재적인 장애의 원인이 될 수 있다.
+
 http://www.cowtowncoder.com/blog/archives/2008/12/entry_119.html
 http://stackoverflow.com/questions/676363/string-or-tostring
