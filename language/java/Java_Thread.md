@@ -1,0 +1,754 @@
+# 병행 프로그래밍#
+
+자바는 병행 프로그래밍(concurrent programming)을 자체적으로 지원하는 첫 번째 주류 프로그래밍 언어 중 하나였음.
+
+애플리케이션 개발자에게 필요한 내용을 중심으로 다룸
+
+
+
+주요내용
+
+
+
+1. Runnable은 비동기로 실행할 수 있는 태스크를 나타낸다.
+2. Executor는 Runnable 인스턴스의 실행을 스케줄링한다.
+3. Callable은 결과를 내는 태스크를 나타낸다.
+4. ExecutorService에 Callable 인스턴스 한 개 이상을 제출하고 나서 결과물의 나오면 결합할 수 있다.
+5. 여러 스레드가 동기화를 하지 않은 채로 공유 데이터를 건드리면 결과는 예측할 수 없다.
+6. 잠금을 이용한 프로그래밍보다 병렬 알고리즘과 스레드 안전 자료 구조를 이용하는게 좋다.
+7. 병렬 스트림과 배열 연산은 계산을 자동으로 안전하게 병렬화 한다.
+8. ConcurrentHashMap은 엔트리의 원자적인 업데이트를 허용하는 스레드 안전 해시 테이블이다.
+9. 잠금 없는 공유 카운터에 AtomicLong을 이용할 수 있고, 경쟁이 높으면 LongAdder를 이용할 수 있다.
+10. 잠금은 한 시점에 한 스레드만 임계 영역을 실행하도록 보장한다.
+11. 인터럽트 가능한 태스크는 인터럽트 플래그가 설정되고 나서 InterruptedException이 일어나면 종료해야 한다.
+12. 장시간 수행하는 태스크는 프로그램의 사용자 인터페이스를 블록하면 안되지만 진척도(progress)와 최종 업데이트는 UI 스레드(사용자 인터페이스 스레드)에서 일어나야 한다.
+13. Process 클래스는 별도의 프로세스에서 명령을 실행하고 입력, 출력, 오류 스트림과 상호 작용하는 기능을 제공한다.
+
+
+
+## 1. 병렬과 병행의 차이##
+
+> 병행(Concurrent) : 
+>
+> [명사] 1. 둘 이상의 사물이 나란히 나감. 2. 둘 이상의 일을 한꺼번에 행함.
+
+
+
+>  병렬(Parallel) :
+>
+>  [명사] 1.  나란히 늘어섬. 또는 나란히 늘어놓음.
+
+
+
+병행(Concurrent) 프로그래밍은 쉽게 말해 멀티스레드 프로그래밍이다.
+
+병렬(Parallel) 프로그래밍은 MPI, OpenMP, CUDA 와 같은 라이브러리를 활용한 멀티코어 프로그래밍이다.
+
+
+
+## 2. 스레드
+
+보통은 스레드를 대신 관리해주는 실행자를 사용하는 게 더 좋지만, 일단 직접 스레드를 이용하는 데 필요한 배경 지식을 알려주며 시작한다.
+
+### 2.1. Runnable 인터페이스
+
+```java
+public interface Runnable {
+  void run();
+}
+```
+
+자바에서는 다음과 같은 방법으로 스레드를 실행한다.
+
+```java
+Runnable task = () -> {...};
+Thread thread = new Thread(task);
+thread.start();
+```
+
+run() 메서드에 들어 있는 코드는 스레드 안에서 실행되고 run() 메서드가 반환될 때 종료된다. 
+
+
+
+정적 메서드 sleep은 지정한 시간 동안 현재 스레드를 잠들게 하여 다른 스레드에서 작업할 기회를 얻게 해준다.
+
+```java
+Runnable task = () -> {
+  ...
+  //Thread.sleep(millis);
+  TimeUnit.SECONDS.sleep(sec);
+  ...
+}
+```
+
+스레드의 작업이 끝나기를 기다리려면 join 메서드를 호출해야 한다.
+
+```java
+thread.join(millis);
+```
+
+
+
+### 7.2. 스레드 로컬 변수
+
+`ThreadLocal` 헬퍼 클래스를 이용해 각 스레드에 고유 인스턴스를 부여하는 방법으로 공유를 피할수도 있다. 예를 들어 `NumberFormat` 클래스의 인스턴스는 스레드에 안전하지 않다. 정적 변수가 있는 상황을 생각해보자.
+
+```java
+public static final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance();
+```
+
+두 스레드가 다음과 같은 연산을 실행하면 동시 접근 때문에 `NumberFormat` 인스턴스가 사용하는 내부 자료 구조가 손상될 수 있다. 그렇게 되면 결과는 쓸모 없게 된다.
+
+```java
+String amountDue = currencyFormat.format(total);
+```
+
+동기화를 이용할 수도 있지만 비용이 많이 든다. 또한, 대안으로 필요할 때마다 지역 `NumberFormat`객체를 생성할 수도 있지만 이 방법도 소모적이다. 
+
+스레드별로 인스턴스 한 개를 생성하려면 다음과 같은 코드를 이용해야 한다.
+
+```java
+public static final ThredLocal<NumberFormat> currencyFormat = ThreadLocal.withInitial(() -> NumberFormat.getCurrencyInstance());
+```
+
+실제 서식 지정자에 접근하려면 다음과 같이 호출하면 된다.
+
+```java
+String amountDue = currencyFormat.get().format(total);
+```
+
+주어진 스레드에서 처음으로 `get`을 호출하면 생성자에 전달한 람다가 호출되어 해당 스레드용 인스턴스를 생성한다. 이후로는 `get`메서드에서 현재 스레드에 속한 인스턴스를 반환한다.
+
+
+
+### 7.4. 기타 스레드 프로퍼티
+
+데몬(`daemon`)은 다른 스레드에 서비스를 제공하는 역할 외에 다른 역할을 맡지 않는 스레드를 말한다. 데몬은 타이머 틱(timer tick)을 보내거나 오래된 캐시 엔트리를 정리하는 스레드에 유용하다. 데몬 스레드만 남아 있으면 가상 머신이 종료된다.
+
+데몬 스레드를 만들려면 스레드를 시작하기전에 `thread.setDaemon(true)`를 호출하면 된다.
+
+```java
+Runnable task = () -> {...};
+Thread thread = new Thread(task);
+thread.setDaemon(true);
+thread.start();
+```
+
+
+
+
+## 3. 병행 태스크##
+
+### 3.1. 태스트 실행하기###
+
+
+
+테스크가 직접 일일히 스레드를 만드는것은 바람직한 방법은 아니다. 짧은 시간동안만 실행되는 태스크에서 일일히 스레드를 생성해서 만드는것은 스레드의 생성과 소멸 시간의 낭비로서 비효율적이다. 
+
+강도 높은 계산을 수행하는 태스크일때 태스크별로 스레드를 사용하는 대신, 프로세서별로 스레드를 하나씩 사용해서 스레드 사이에서 스위칭(switching)하는 오버헤드(overhead)를 피하는 게 좋다.
+
+
+
+자바 병행성 라이브러리에서 실행자(`executor`)는 태스크를 수행할 스레드를 선택해서 태스크를 실행한다.
+
+```java
+Runnable task = ()->{...};
+Executor exec = ...;
+exec.execute(task);
+```
+
+Executor 프레임웍은 다음과 같은 특징을 지닌다.
+
+- 스레드 풀을 사용
+
+- 무거운 스레드는 미리 할당 가능
+
+- 태스크와 스레드를 생성하고 관리하는 것을 분리
+
+- 스레드 풀안의 스레드는 한번에 하나씩 여러 태스크를 실행
+
+- 태스크 큐를 이용해 태스크를 관리
+
+- ExecutorService 를 더이상 필요 없으면 중지
+
+- ExecutorService가 멈추면 모든 스레드도 중지
+
+  ​
+
+Executors 클래스에는 다양한 유형의 실행자를 만들어내는 팩토리 메서드(factory method)가 있다.
+
+```
+exec = Executors.newCachedThreadPool(); 
+```
+
+이 호출은 프로그램에 최적화된 실행자를 결과로 주는데, 프로그램에는 수명이 짧거나 대부분의 시간을 대기하며 보내는 태스크가 다수 포함되어 있다. 각 태스크는 가능하면 유휴 스레드(idle thread)에서 실행되지만, 모든 스레드가 실행 중이면 새로운 스레드가 할당된다. 장시간 동안 유휴상태인 스레드는 종료된다.
+
+
+
+```java
+exec = Executors.newFixedThreadPool(nthreads);
+```
+
+이 호출은 고정 개수 스레드 풀(thread pool)을 결과로 준다. 만일 이미 고정 개수의 스레드를 통하여 태스크가 실행중이라면 새롭게 요청된 태스크는 스레드를 이용할 수 있게 될 때까지 순서를 기다린다. 고정 개수 스레드 풀은 강도 높은 계산을 수행하는 태스크에 적합하다.
+
+```java
+public static void main(String[] args) {
+  Runnable hellos = () -> {
+    for(int i = 1; i <= 1000; i++)
+      System.out.println("Hello " + i);
+  };
+  
+  Runnable goodbyes = () -> {
+    for(int i = 1; i <= 1000; i++)
+      System.out.println("Goodbye " + i);
+  };
+  
+  Executor executor = Executors.newCachedThreadPool();
+  executor.execute(hellos);
+  executor.execute(goodbyes);
+  
+  executor.shutdown();
+}
+```
+
+```
+Hello 1
+...
+Goodbye 912
+Goodbye 913
+Hello 521
+Goodbye 914
+Goodbye 915
+Goodbye 916
+Goodbye 917
+Goodbye 918
+Hello 522
+Hello 523
+Hello 524
+...
+Hello 1000
+```
+
+
+
+### 3.2. 퓨처와 실행자 서비스###
+
+서브태스크(하위 작업) 여러 개로 나누는 계산을 생각해보면 서브태스크는 각각 부분 결과를 계산하고 모든 태스크가 완료되면 결과들을 결합하려고 한다. 이런 경우 서브 태스크에 `Callable` 인터페이스를 사용할 수 있다. `Callable`의 call 메서드는 `Runnable` 인터페이스의 run 메서드와 달리 값을 반환한다.
+
+```java
+public interface Callable(V) {
+  V call() throws Exception;
+}
+```
+
+call 메서드는 추가로 임의의 예외를 던질 수 있다.
+
+`Callable`을 실행하려면 `Executor`의 서브인터페이스인 `ExecutorService` 인터페이스의 인스턴스가 필요하다. `Executors` 클래스의 `newCachedThreadPool` 과 `newFixedThreadPool` 메서드가 `ExecutorService` 객체를 돌려준다.
+
+```java
+ExecutorService exec = Executors.newFixedThreadPool();
+Callable<V> task = ...;
+Future<V> result = exec.submit(task);
+```
+
+태스크를 제출(submit)하면 퓨처(future)객체를 얻게 되는데, 퓨처 객체는 언젠간 결과를 얻게 되는 계산을 표현한다. Future 인터페이스에는 다음과 같은 메서드가 포함되어 있다.
+
+```java
+v get() throws InterruptedException, ExecutionException
+v get(long timeout, TimeUnit unit)
+	throws InterruptedException, ExecutionException, TimeoutException;
+boolean cancel(boolean mayInterruptIfRunning)
+boolean isCancelled()
+boolean isDone()
+```
+
+get 메서드는 결과를 얻게 되거나 타임아웃에 이를 때까지 블록한다. 그런 다음 계산된 값을 반환하거나, call 메서드에서 예외를 던졌을 때 해당 예외를 감싸고 있는 `ExecutionException`을 던진다.
+
+cancel 메서드는 태스크 취소를 시도한다. 태스크가 이미 실행 중인 상태가 아니면 해당 태스크는 스케줄링되지 않는다. 태스크가 이미 실행 중이고 `mayInterruptIfRunning`이 true면 해당 태스크를 실행하는 스레드가 인터럽드된다.
+
+보통 태스크는 여러 서브태스크의 결과를 기다려야 한다. 각 서브태스크를 별도로 제출하는 대신에 `Callable` 인스턴스의 `Collection`을 전달하여 `invokeAll` 메서드를 호출할 수 있다.
+
+예를 들어 파일 집합에서 단어가 나온 횟수를 센다고 해보자. 파일별로 단어가 나온 횟수를 반환하는 `Callable<Integer>`를 만든다. 그런 다음 이들 모두를 실행자에 제출한다. 모든 태스크가 완료되면 모두 완료된 퓨처의 리스트를 얻게 되어 답들을 합산할 수 있다. 
+
+```java
+String word = ...;
+Set<Path> paths == ...;
+List<Callable<Long>> tasks = new ArrayList<>();
+for(Path p : paths) 
+  tasks.add(
+	() -> {return p에서 단어가 나온 횟수}
+	);
+List<Future<Long>> results = executor.invokeAll(tasks);
+long total = 0;
+for(Future<Long> result : results) 
+  total += result.get();
+```
+
+타임아웃을 파라미터로 받아서 해당 타임아웃에 이르렀을 때 완료되지 않은 태스크를 모두 취소하는 invokeAll 형태도 있다.
+
+
+
+`invokeAny` 메서드는 `invokeAll`과 유사하지만 데출한 태스크 중 하나가 예외를 던지지 않고 완료하면 즉시 반환한다. 그런 다음 Future의 값을 반환하고 다른 태스크는 취소한다. 이 메서드는 일치하는 대상을 발견한 즉시 결론을 내릴 수 있는 검색에 유용하다. 다음 코드 조각은 지정한 단어가 포한된 파일을 찾는다.
+
+```java
+String word = ...;
+Set<Path> files = ...;
+List<Callable<Path>> tasks = new ArrayList<>();
+for(Path p : files) tasks.add(
+	() -> { if (p에 단어가 있으면) return p; else throw ...});
+Path found = executor.invokeAny(tasks);
+```
+
+예에서 볼 수 있듯이 	`ExecutorService`는 많은 일을 대신해준다. 즉. 태스크를 스레드에 매핑할 뿐만 아니라 태스크의 결과, 예외, 취소까지 처리해준다.
+
+
+
+## 4. 스레드 안전성##
+
+### 4.1. 가시성###
+
+```java
+//private static volatile boolean done = false; // add volatile
+private static boolean done = false; // add volatile
+
+public static void main(String[] args) {
+  Runnable hellos = () -> {
+    for (int i = 1; i <= 1000; i++)
+      System.out.println("Hello " + i);
+    done = true;
+  };
+  Runnable goodbye = () -> {
+    int i = 1;
+    while (!done) i++;
+    System.out.println("Goodbye " + i);
+  };
+  Executor executor = Executors.newCachedThreadPool();
+  executor.execute(hellos);
+  executor.execute(goodbye);
+}
+```
+
+```
+expect : 
+Hello 996
+Hello 997
+Hello 998
+Hello 999
+Hello 1000
+Goobye 394991
+
+actual:
+Hello 996
+Hello 997
+Hello 998
+Hello 999
+Hello 1000
+// Goodbye 가 출력되지 않는다.
+```
+
+
+
+done과 같은 변수가 메모리 어딘가에 있을거라 생각하지만 프로세서는 필요한 데이터를 레지스터(register)나 보드에 달린 메모리 캐시(memory cache)에 저장하려고 하고, 결국에는 변경을 다시 메모리에 쓴다. 이런한 캐싱은 프로세서 퍼포먼스(수행 성능)에서 빠질 수 없는 역할을 한다. 캐시된 사본을 동기화 하는 연산이 있긴 하지만, 요청을 받을 때만 일어난다.
+
+그리고 컴파일러, 가상 머신, 프로세서는 프로그램의 의미를 바꾸지 않는 한 연산 속도를 올릴 목적으로 명령어의 순서를 변경할 수 있게 되어있다. 
+
+```java
+x = y와 관련 없는 값;
+y = x와 관련 없는 값;
+z = x + y;
+```
+
+처음 두 단게는 세 번째 단게보다는 반드시 먼저 일어나야 하지만, 둘은 어떤 순서도 일어나도 괜찮다. 프로세서는 처음 두 단계를 병렬로 수행하거나(종종 이렇게 한다). 두 번째 단계의 입려글 더 먼저 이용할 수 있으면 순서를 바꿀수 있다.
+
+
+
+```
+while(!done) i++;
+// 위의 루프는 구현부에서 done을 변경하지 않으므로 아래와 같이 재배치될 수 있다.
+if(!done) while(true) i++;
+```
+
+위와 같은 최적화(optimization)은 동시 메모리 접근이 없다고 가정한다. 동시 메모리 접근이 있을 때는 가상머신이 알아야 한다. 그래야 가상 머신이 부적절한 재배치를 금지하는 프로세서 명령어를 만들 수 있다.
+
+
+
+변수업데이트가 보이게 보장하는 방법들
+
+1. final 변수의 값은 초기화 후에 보인다.
+2. static 변수의 초깃값은 정적 초기화(initialization) 후에 보인다.
+3. volatile 변수의 변경은 보인다.
+4. 잠금을 해제하기 전에 일어나는 변경은 같은 잠금을 획득하는 쪽에 보인다.
+
+
+
+처음의 예제에서는 공유 변수 done을 `volatile` 제어자로 선언하면 문제가 사라진다.
+
+```java
+private static volatile boolean done;
+```
+
+이렇게 하면 컴파일러는 한 태스크에서 done을 변경했을 때 다른 태스크에도 해당 변경이 보이도록 보장하는 데 필요한 명령어를 만들어낸다. 이 문제를 해결하는 데는 `volatile` 제어자로도 충분하지만, 공유 변수를 volatile로 선언하는 방법은 일반적인 해결책이 되지 못한다.
+
+
+
+### 4.2. 경쟁조건###
+
+```java
+// 병행 태스크 여러 개가 공유 정수 카운터를 업데이트
+private static volatile int count = 0;
+...
+count++; // 태스크 1
+...
+count++; // 태스크 2
+...
+```
+
+업데이트를 보이게 하려고 변수를 `volatile`로 선언했다. 하지만 이걸로 충분하지 않다.
+
+count++ 업데이트는 원자적(atomic)이지 않다. 실제로는 아래와 같은 의미다.
+
+```java
+count = count + 1;
+```
+
+count + 값은 count 변수에 다시 저장하기 전에 스레드가 선점되면 인터럽트될 수 있다.
+
+```java
+int count = 0; // 초깃값
+register1 = count + 1; // 스레드 1이 count + 1을 계산한다.
+... // 스레드 1이 선점된다.
+register2 = count + 1; // 스레드 2가 count + 1을 계산한다.
+count = register2; // 스레드 2가 count에 1을 저장한다.
+... // 스레드 1이 다시 실행한다.
+count = register1; // 스레드 1은 count에 1을 저장한다.
+```
+
+위와 같은 경우 count는 2가 아니라 1이다. 이런 오류는 공유 변수를 업데이트 하는 '경쟁'에서 승리하는 스레드에 의존하므로 경쟁 조건(race condition)이라고 한다. 
+
+
+
+지금까지 개발을 하면서 이런 문제가 생긴적이 없이 잘 돌았었는데, 이러한 문제가 실제로 일어날까? 
+
+분명히 일어난다. 아래 대로를 보자
+
+데모 프로그램에는 스레드 100개가 포함되어 있으며, 각 스레드는 카운터를 1,000번 증가시키고 결과를 출력한다. 
+
+```java
+for(int i = 1; i <= 100; i++){
+    int taskId = i;
+    Runnable task = () -> {
+        for(int k = 1; k <= 1000; k++){
+            count++;
+        }
+        System.out.println(taskId + ": " + count);
+    };
+    executor.execute(task);
+}
+```
+
+```
+output:
+1: 1000
+2: 2000
+3: 3000
+4: 4000
+7: 5000
+6: 6000
+8: 7000
+9: 8000
+...
+92: 89347
+93: 90347
+94: 91347
+95: 92347
+96: 93347
+...
+99: 96347
+100: 97347
+```
+
+이 문제를 해결하는 방법이 있다. 바로 잠금을 이용해서 임계적인 연산을 원자적으로 만드는 것이다. 잠금을 이용하는 프로그램 작성법은 뒤에 재진입 가능 잠금을 통해 알아본다.
+
+하지만 유감스럽게도 병행성 문제를 해결하는 데 잠금은 일반적인 해결책이 될 수 없다. 잠금은 적절하게 이용하기 어려워서 퍼포먼스를 현저희 떨어뜨리거나, 교착 상태(`deadlock`)를 야기하는 실수를 저지르기 쉽다.
+
+
+
+### 4.3. 안전한 병행성을 실현하는 전략###
+
+잠금 설정은 병렬성 기회를 줄이므로 많은 비용이 들 수 있다. 예를 들어 결과를 고유 해시 테이블에 넣는 태스크가 많을 때는 업데이트가 수행될 때마다 해당 해시 테이블이 잠긴다. 바로 이 부분이 실제 병목 지점이다. 때로는 데이터를 나눠서(partition) 동시에 서로 다른 조각이 접근할 수 있게 할 수도 있다. 자바 병행성 라이브러리에서 제공하는 몇 가지 자료 구조는 스트림 라이브러리의 병렬 알고리즘처럼 파티셔닝을 이용한다. 이 작업을 직접 수행하려고 하지 말아야 한다! 올바르게 동작하도록 만들기가 정말 어렵기 때문이다. 대신 자바 라이브러리에서 제공하는 자료 구조와 알고리즘을 사용하기 바란다.
+
+
+
+
+## 5. 스레드 안전 자료 구조##
+
+여러 스레드에서 동시에 큐나 해시 테이블과 같은 자료 구조를 수정하면 해당 자료 구조의 내부가 손상되기 쉽다. 
+
+예를 들어 어떤 스레드에서 새로운 요소 삽입을 시작한다고 하자. 그리고 이 스레드가 링크를 수정하는 도중에 선점되어, 또 다른 스레드가 같은 위치에서 순회를 시작한다고 해보자. 이 때 두 번째 스레드에서 유효하지 않은 링크를 따라가다가 일을 엉망으로 만들어 버릴지도 모른다. 예외를 던지거나 심지어는 무한 루프에 빠지기도 한다.
+
+잠금을 이용해서 한 시점에 한 스레드에서만 자료 구조에 접근할 수 있게 하고, 다른 스레드는 블로킹(`blocking`)하도록 보장할 수 있다. 하지만 이 방법은 비효율적이다. 반면에 `java.utile.concurrent` 패키지에 있는 컬렉션은 영리하게 구현되어있다. 여러 스레드에서 자료 구조의 각기 다른 부분에 접근하면 서로 블로킹하는 일 없이 동시에 접근할 수 있게 한다. 
+
+### 5.1. 병행 해시 맵###
+
+`ConcurrentHashMap`은 스레드가 안전한 연산을 할 수 있게 해주는 해시 맵이다. 스레드가 동시에 해당 맵에 연산을 수행할 때 아무리 많은 스게드가 연산을 수행해도 내부가 손상되지 않는다. 물론 일부 스레드가 일시적으로 블록될 수는 있는만, `ConcurrentHashMap`은 상당수의 병행 리더(`concurrent reader`)와 일정 개수의 병행 라이터(`concurrent writer`)를 효율적으로 지원한다.
+
+맵을 이용해서 어떤 특성이 몇 번이나 나타나는지 세는 경우, 예를 들어 여러 스레드에 단어들이 있고, 그 단어들의 빈도를 세는 경우 아래 코드는 카운트를 업데이트하는 코드인데 확실히 스게드에 안전하지 않은 코드이다.
+
+```java
+ConcurrentHashMap<String, Long> map = new ConcurrentHashMap<>();
+...
+Long oldValue = map.get(word);
+Long newValue = oldValue == null ? 1 : oldValue + 1;
+map.put(word, newValue); // 오류 - oldValue를 교체하지 않을 수도 있다.
+```
+
+또 다른 스레드에서 동시에 정확히 같은 카운트를 업데이트하고 있을지도 모르기 때문이다.
+
+값을 안전하게 업데이트하려면 `compute`메서드를 이용해야 한다. `compute` 메서드를 호출할 때는 키(key)와 새 값을 계산하는 함수를 전달해야 한다. 해당 함수는 키와 해당 키에 연관된 값(없을 때는 null)을 받고, 새 값을 계산한다. 
+
+다음은 카운트를 업데이트하는 방법이다.
+
+```java
+map.compute(word, (k, v) -> v = null ? 1 : v + 1);
+```
+
+`compute` 메서드는 원자적이다. 따라서 계산을 수행하는 도중에는 다른 어떤 스레드에서도 해당 맵 엔트리를 변경할 수 없다.
+
+`computeIfPresent`와 `computeIfAbsent`라는 변형도 있는데, 각각 기존 값이 있거나 없을 때만 새로운 값을 계산한다.
+
+### 5.2. 블로킹 큐###
+
+블로킹 큐(`blocking queue`)는 테스크 사이에서 작업을 조율하는 데 사용한다. 생산자 태스크는 아이템을 큐에 삽입하고, 소비자 태스크는 아이템을 추출한다. 블로킹 큐를 이용하면 한 태스크에서 다른 태스크로 데이터를 안전하게 전달할 수 있다. 
+
+요소를 추가하려는 쿠가 가득 차 있거나, 비어 있는 큐에서 요소를 제거하려고 하면 연산이 블록된다. 블로킹 큐는 이 방식으로 부하의 균형을 맞춘다. 생산자 태스크가 소비자 태스크보다 느리게 수행하면, 소비자는 결과를 기다리며 블록된다. 반대로 더 빠르게 수행하면, 소비자가 결과를 가져갈 때까지 생산자는 큐가 가득 찬 상태를 유지한다. 
+
+표 1은 블로킹 큐용 메서드다. 블로킹 큐 메서드는 큐가 가득 차거나 비어 있을 때 수행하는 동작에 따라 세 분류로 나뉘다. 블로킹 메서드 외에도 연산을 성공하지 못했을 때 예외를 던지는 메서드도 있고, 작업을 수행할 수 없을 때 예외를 던지는 대신 실패를 나타내는 값을 반환하는 메서드도 있다.
+
+| 메서드     | 일반동작                 | 오류 동작                                   |
+| ------- | -------------------- | --------------------------------------- |
+| put     | 요소를 꼬리에 추가한다.        | 큐가 가득 차 있으면 블록된다.                       |
+| take    | 머리 요소를 제거해서 반환한다.    | 큐가 비어 있으면 블록된다.                         |
+| add     | 요소를 꼬리에 추가한다.        | 큐가 가득 차 있으면 IllegalStateException을 던진다. |
+| remove  | 머리 요소를 제거해서 반환한다.    | 큐가 비어 있으면 NoSuchElementException을 던진다.  |
+| element | 머리 요소를 반환한다.         | 큐가 비어 있으면 NoSuchElementException을 던진다.  |
+| offer   | 요소를 추가하고 true를 반환한다. | 큐가 가득 차 있으면 false를 반환한다.                |
+| poll    | 머리 요소를 제거해서 반환한다.    | 큐가 비어 있으면 null을 반환한다.                   |
+| peek    | 머리 요소를 반환한다.         | 큐가 비어 있으면 null을 반환한다.                   |
+
+*`poll`과 `peek` 메서드는 실패를 나타내기 위해 null을 반환하므로 블로킹 큐에 널 값을 삽입하는 일은 허용되지 않는다.
+
+타임아웃을 받는 `offer`와 `poll`메서드의 변형도 있다. 
+
+```java
+boolean success = q.offer(x, 100, TimeUnit.MILLISECONDS);
+```
+
+시도를 성공하면 `true`를 반환하고, 실패해서 타임아웃에 이르면 `false`를 반환한다. 이와 유사하게 다음 호출은 100밀리초 동안 큐의 머리 요소를 제거하려고 시도한다.
+
+```java
+Object head = poll(100, TimeUnit.MILLISECONDS);
+```
+
+시도를 성공하면 머리 요소를 반환하고, 실패해서 타임아웃에 이르면 null을 반환한다.
+
+
+
+이러한 설계를 이용할 때 흔히 마주하는 도전은 소비자를 멈추게 하는 일이다. 소비자는 큐가 비어 있을 때 종료시킬 수 없다. 결국 생산자가 아직 시작되지 않았거나 뒤떨어져 있을지도 모르는 것이다. 생산자가 하나만 있을때는 생산자가 큐에 '마지막 아이템'을 나타내는 값을 추가할 수 있다. 수화물 수령 벨트에서 '마지막 가방'이라는 이름표를 붙인 모조 가방처럼 말이다.
+
+## 6. 원잣값##
+
+여러 스레드에서 공유 카운터를 업데이트할 때 해당 업데이트는 스레드에 안전한 방식으로 일어나게 해야 한다. `java.util.concurrent.atomic` 패키지에는 이를 위한 클래스가 있다. 
+
+예를 들어 아래와 같이 일련의 숫자를 안전하게 만들수 있다.
+
+```java
+public static AtomicLong nextNumber = new AtomicLong();
+// 어떤 스레드에서...
+long id = nextNumber.incrementAndGet();
+```
+
+`incrementAndGet` 메서드는 원자적으로 `AtomicLong`을 증가시키고 증가한 값을 반환한다. 여러 스레드에서 같은 인스턴스에 동시 접근하더라도 올바른 값이 계산되어 반환됨을 보장 받는다.
+
+## 7. 잠금##
+
+스레드 안전 카운터나 블로킹 큐를 만드는 방법을 알아보고 관련 비용과 복잡성을 어느 정도 이해해보자.
+
+### 7.1. 재진입 가능 잠금###
+
+공유 변수가 손상되는 것을 피하려면 한 번에 한 스레드에서만 새로운 값을 계산하고 설정할 수 있게 해야한다. 인터럽션 없이 온전히 실행 해야하는 코드를 임계 영역(`critical section`)이라고 한다. 임계 영역은 잠금(lock)을 이용해서 구현할 수 있다.
+
+```java
+Lock countLock = new ReentranLock(); // 여러 스레드에서 공유한다.
+int count; // 여러 스레드에서 공유한다.
+...
+countLock.lock();
+try {
+  count++; // 임계 영역
+} finally {
+  countLock.unlock(); // 잠금을 확실히 해제한다.
+}
+```
+
+맨 처음 `lock` 메서드를 실행하는 스레드는 countLock 객체를 잠그고 나서 임계 영역으로 들어간다. 또다른 스레드가 같은 객체에 `lock` 호출을 시도하면, 첫 번째 스레드가 `unlock`을 호출할 때까지 블록된다. 이 방식으로 한 번에 한 스레드만 임계 영역을 실행할 수 있도록 보장한다.
+
+`unlock` 메서드를 `finally` 절 안에 둔 덕분에 임계 영역에서 어떤 예외가 일어나도 잠금이 해제된다는 점을 주목하기 바란다. 이렇게 하지 않으면 잠금이 영구적으로 잠겨서 다른 어떤 스레드도 다음 부분을 진행하지 못하게 될 수도 있다. 
+
+언뜻 보면 잠금으로 임계 영역을 보호하는 게 아주 간단해 보안다. 하지만 세부 내용을 들어가면 어렵다. 경험에 비추어 보면, 잠금을 이용하는 코드를 제대로 작성하는 데 여러움을 격는 개발자들이 많다. 이를테면 잘못된 잠금을 이용하거나 모든 스레드가 잠금을 기다리는 어느 스레드도 진행할 수 없게 되는 교착 상태(`deadlock`)에 빠지는 상황을 만들 수도 있다.
+
+그러므로 애플리케이션 개발자는 잠금을 최후의 방법으로만 이용해야 한다. 먼저 불변 데이터를 이용하거나 한 스레드에서 다른 스레드로 가변 데이터를 전달하는 방법으로 공유를 피하려고 해야한다. 공유가 꼭 필요할 때는 `ConcurrentHashMap`이나 `LongAdder`와 같이 이미 만들어진 스레드 안전 자료 구조를 이용해야 한다. 잠금을 알아두면 이런 자료 구조를 구현하는 방법을 이해하는데 유용한다. 그럼에도 세부 내용은 전문가에게 맡기는 게 가장 좋다.
+
+### 7.2. synchronized 키워드###
+
+`ReentrantLock`은 명시적인 잠금이다. 자바의 모든 객체는 고유의 잠금이 포함되어 있으므로 명시적인 잠금을 사용할 필요가 없다. 하지만 고유의 잠금을 이해하려면 먼저 명시적인 잠금을 익혀두는 게 좋다.
+
+`synchronized` 키워드는 고유의 잠금을 잠그는 데 사용한다. `synchronized`는 두 가지 형태로 사용 할 수 있다. 먼저 다음과 같은 형태로 블록일 잠글 수 있다.
+
+```java
+synchronized(obj) {
+  임계 영역
+} 
+
+// 위의 형태는 본질적으로 아래의 코드를 의미한다.
+
+obj.intrinsicLock.lock();
+try {
+  임계 영역
+} finally {
+  obj.intrinsicLock.unlock();
+}
+```
+
+메서드를 `synchronized`로 선언할 수도 있다. 그러면 메서드의 구현부가 수신자 파라미터 `this`를 기준으로 잠긴다.
+
+```java
+public synchroized void method() {
+  구현부
+}
+
+// 위의 코드는 아래의 코드와 같다.
+
+public void method() {
+  this.intrinsicLock.lock();
+  try {
+    구현부
+  } finally {
+    this.intrinsicLock.unlock();
+  }
+}
+```
+
+예를 들어 카운터를 간단하게 다음과 같이 선언할 수 있다.
+
+```java
+public class Counter {
+  private int value
+  public synchronized int increment() {
+    value++;
+    return value;
+  }
+}
+```
+
+Counter 인스턴스 고유의 잠금을 이용하면 명시적인 잠금을 이용할 필요가 없다.
+
+위에서 본 것처럼 `synchronized` 키워드를 사용하면 상당히 간결한 코드를 얻을 수 있다. 물론 이 코드를 이해하려면 각 객체의 고유의 잠금이 포함된다는 사실을 알아야 한다.
+
+
+
+동기화 메서드는 모니터(`monitor`) 개념에 영감을 받아 만든 것이다. 모니터는 본질적으로 모든 인스턴스 변수가 비공개이고 모든 메서드가 비공개 잠금으로 보호되는 클래스다.
+
+자바에서는 공개 인스턴스 변수를 두고 동기화 메서드와 비동기화 메서드를 혼용할 수 있다. 이보다 더 큰 문제는 고유의 잠금을 공개로 접근할 수 있다는 점이다.
+
+이부분을 혼동하는 개발자들이 많다. 예를 들어 자바 1.0에는 동기화 메서드가 있는 `Hashtable`클래스가 포함되어 있는데, 이 클래스는 해시 테이블을 변경한다. 다음과 같이 이런 테이블을 안전하게 순회하기 위한 잠금을 획득할 수 있다.
+
+```java
+synchronized (table) {
+  for (K key : table.keySet()) ...
+}
+```
+
+여기서 table은 해시 테이블과 이 테이블의 메서드에서 이용하는 잠금을 모두 나타낸다. 바로 이점이 흔한 오해의 원인이다.
+
+
+
+
+
+
+
+## 8. 프로세스
+
+지금까지는 같은 프로그램 안에 있는 자바 코드를 별도의 스레드에서 실행하는 방법을 살펴봤다. 때로는 다른 프로그램을 실행해야 할 때도 있다. 이땐 `ProcessBuilder`와 `Process` 클래스를 사용하면 된다. `Process` 클래스 명령을 별도의 운영체제 프로세스에서 실행하고, 표준 입력, 표준 출력, 표준 오류 스트림과 상호 작용할 수 있게 해준다. `ProcessBuilder` 클래스는 `Process` 객체를 설정하는 기능을 제공한다.
+
+### 8.1 프로세스 생성하기
+
+```java
+jdk 1.5 이전에는 Runtime.exec() 를 사용했다.
+```
+
+실행할 명령을 지정해서 프로세스 생성을 시작해보자. 명령을 구성하는 `List<String>` 이나 문자열들을 전달하면 된다.
+
+```java
+// myapp.c 를 컴파일 한다.
+ProcessBuilder builder = new ProcessBuilder("gcc", "myapp.c");
+Process p = builder.start();
+```
+
+각 프로세스는 작업 디렉터리와 연관되고, 작업 디렉터리는 상대 디렉터리 이름을 해석하는 데 사용된다. 프로세스는 기본으로 가상 머신과 같은 작업 디렉터리(보통 java 프로그램을 실행하는 디렉터리)에 연관된다. 다음과 같이 directory 메서드로 작업 디렉터리를 변경할 수 있다.
+
+```java
+builder = builder.directory(path.toFile());
+```
+
+프로세스의 표준 입력, 표준 출력, 표준 요류에 접근할 수 있는 파이프 스트림은 아래와 같다.
+
+```java
+OutputStream processIn = p.getOutStream();
+InputStream processOut = p.getInputStream();
+InputStream precessErr = p.getErrorStream();
+```
+
+프로세스의 입력 스트림이 JVM에서는 출력 스트림이고 다른 스트림들도 같은 패턴이다.
+
+만일 새로운 프로세스의 입력, 출력, 오류 스트림이 JVM과 같아야 한다고 명시할 수 있다. 사용자가 콘솔에서 JVM을 실행하면 모든 사용자 입력이 해당 프로세스로 전달되며, 프로세스의 출력이 콘솔에 표시된다. 
+
+```java
+builder.redirectIO();
+```
+
+위 명령은 세 스트림에 모두 적용한다. 스트림의 일부만 상속받으려면 redirectInput, redirectOutput, redirectError 메서드에 다음 값을 전달하면 된다. 
+
+```java
+ProcessBuilder.Redirect.INHERIT
+```
+
+다음과 같이 프로세스의 스트림을 파일로 재지정(redirect)하여 File 객체를 전달할 수 있다.
+
+```java
+builder.redirectInput(inputFile)
+	.redirectOutput(outputFile)
+	.redirectError(errorFile)
+```
+
+이렇게 하면 프로세스가 시작될 때 출력용과 요류용 파일이 생성되거나 잘린다. 기존 파일에 추가하려면 다음과 같은 코드를 이용하면 된다.
+
+```java
+builder.redirectOutput(ProcessBuilder.Redirect.appendTo(outputFile));
+```
+
+만일 오류 스트림도 출력 스트림에 같이 출력하려면 아래과 같이 설정하면 된다. 실제로 오류메시지를 출력메시지와 함께 출력하면 용이한 경우가 많다.
+
+```java
+builder.redirectErrorStream(true);
+```
+
+
+
+
+
+
+
+
+
+http://blog.eomdev.com/java/2016/04/06/Multi-Thread.html
+
+http://ismydream.tistory.com/51
