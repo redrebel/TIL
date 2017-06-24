@@ -36,3 +36,11 @@
   ```
 
 https://nolboo.kim/blog/2016/08/02/docker-for-mac/
+
+1. docker가 실행될때 자동으로 컨테이너가 실행되게 하기
+```
+# 자동실행
+docker update --restart always [container name]
+# 자동실행 제거
+docker update --restart always [container name]
+```
