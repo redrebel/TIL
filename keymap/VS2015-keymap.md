@@ -1,2 +1,2 @@
-Navigate Backward Ctrl+-
-Navigate Forward Ctrl+Shift+-
+Ctrl+- : Navigate Backward   
+Ctrl+Shift+- : Navigate Forward 
