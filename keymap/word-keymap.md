@@ -1,2 +1,5 @@
-alt+cmd+g : 페이지 이동(mac)  
-ctrl+g : win
+### MACOS
+alt+cmd+g : 페이지 이동
+
+### WIN
+ctrl+g : 페이지 이동
