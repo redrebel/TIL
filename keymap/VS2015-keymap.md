@@ -11,3 +11,6 @@ Ctrl+m , Ctrl+m : expand / collapse section
 Comment: Ctrl + K + C
 UnComment: Ctrl + K + U
 
+### Bookmark ###
+Ctrl + k , Ctrl + k : bookmark add/remove  
+Ctrl + k , Ctrl + w : bookmark window
