@@ -1,4 +1,4 @@
-만일 크롬에서 (https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)[Vue.js devtools]를 사용하여 디버깅을 하려고하는데
+만일 크롬에서 [Vue.js devtools](https://chrome.google.com/webstore/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)를 사용하여 디버깅을 하려고하는데
 ```
 Devtools inspection is not available because it's in production mode or explicitly disabled by the author.
 ```

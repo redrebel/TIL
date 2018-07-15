@@ -1,0 +1,15 @@
+기본 골격을 구성
+
+```
+// vue-cli install
+npm install -global vue-cli
+
+// webpack-simpel 초기화
+vue init webpack-simple
+
+// 필요한 자바스트립트 패키지를 설치
+npm install
+
+// node js 실행
+npm run dev
+```

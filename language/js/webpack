@@ -1,0 +1,20 @@
+# webpack global 설치
+npm i webpack -g
+
+
+# webpack-cli global 설치
+npm i webpack-cli -g
+
+
+# create a package json file
+npm init -y
+
+# install lodash library using this command
+
+#  create bundle
+webpack app/index.js --output dist/bundle.js --mode development
+--mode development 은 bundle.js 파일내용이 보기 좋게 줄가뀜되어보이고
+--mode production 은 한줄로 표시된다.
+
+# install webpack-dev-server
+npm install webpack-dev-server -g
