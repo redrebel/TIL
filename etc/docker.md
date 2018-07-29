@@ -1,5 +1,7 @@
 ## MACOS 기준
 
+docker == container
+
 ### DOWNLOAD
 1. https://docs.docker.com/docker-for-mac/#download-docker-for-mac 접속
 2. Download Docker for Mac > Stable channel > Get Docket for Mac(stable) 클릭
