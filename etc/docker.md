@@ -22,7 +22,7 @@ docker == container
   ```
   $ docker search [keywork]
 
-  $ docker pull [이미지이름]
+  $ docker pull [image name]
   ```
 6. 이미지를 확인 & 컨테이너로 생성
   ```
@@ -32,9 +32,20 @@ docker == container
   ```
 7. 컨테이너 중지 & 재실행
   ```
-  $ docker stop [컨테이너이름]
+  $ docker stop [container name]
 
-  $ docker start [컨테이너이름]
+  $ docker start [container name]
+  ```
+8. 실행중인 컨터이너에 접속
+  ```
+  $ docker attach [container name]
+  또는
+  $ docker exec -ti [container name] bash
+  ```
+
+9. 출력로그보기
+  ```
+  $ docker logs [container name]
   ```
 
 https://nolboo.kim/blog/2016/08/02/docker-for-mac/
@@ -46,3 +57,8 @@ docker update --restart always [container name]
 # 자동실행 제거
 docker update --restart always [container name]
 ```
+
+1. Dockerfile
+  This is a small "program" to create an image.
+  `docker build -t [name-of-result]`.
+  
