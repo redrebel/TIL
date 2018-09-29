@@ -10,6 +10,12 @@ Kubernetes는 kubectl run, expose, scale 명령으로 바로 사용할 수 있�
 cluster -->
 
 
+start
+$kubectl apply -f [yml files]
+
+stop
+$kubectl delete -f [yml files]
+
 
 
 개발팀이 개발과 시스템에 대한 배포/운영을 담당한다면, 데브옵스팀은 개발팀이 이를 쉽게할 수 있는 아랫단의 플랫폼과 자동화를 하는데 목표를 두는 역할로 역할이 명확해지고 있다.
@@ -48,20 +54,13 @@ Spring Cloud Sleuth가 지원하는 Component?
 
 ### kubernetes Dashboard
 https://github.com/kubernetes/dashboard#kubernetes-dashboard   
+http://blog.cjred.net/entry/kubernetes-Dashboard-%EC%84%A4%EC%B9%98%EC%99%80-%EB%A1%9C%EA%B7%B8%EC%9D%B8
 
-쿠버네티스 대시보드가 설치되고 실행되고 있는지 확인한다.
-`kubectl get pods --all-namespaces | grep dashboard`
+### Heptio Contour (ingress 서비스)
+`kubectl apply -f https://j.hept.io/contour-deployment-rbac`
 
-만일 없다면 설치한다.   
-`$ kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml  `
-
-localhost에서 작업을 한다면 secure channel 을 cluster에 생성해야한다. 아래명령을 사용한다.   
-`$kubectl proxy`
-
-login  
-아래와 같이 로그인창이 뜬다.
-`kubectl get serviceaccount default -o yaml`
-`kubectl describe secret default-token-btkg6`
+### Fluentd
+Logging
 
 
 ### gcloud console command
