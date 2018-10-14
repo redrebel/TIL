@@ -58,7 +58,11 @@ docker update --restart always [container name]
 docker update --restart always [container name]
 ```
 
+1. 컨테이너 모두 삭제
+```
+$ docker rm `docker ps -a -q`
+```
+
 1. Dockerfile
   This is a small "program" to create an image.
   `docker build -t [name-of-result]`.
-  
