@@ -66,3 +66,9 @@ $ docker rm `docker ps -a -q`
 1. Dockerfile
   This is a small "program" to create an image.
   `docker build -t [name-of-result]`.
+
+
+## 리눅스에 Docker 설치
+  ```shell
+  $ curl -fsSL https://get.docker.com/ | sudo sh
+  ```
