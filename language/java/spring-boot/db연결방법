@@ -2,9 +2,17 @@ xml 방법과
 java로 annotation 방법이있다.
 
 xml방법은
-SqlSesionTemplate 을 사용하는 Dao방법이 있고,
+SqlSessionTemplate 을 사용하는 Dao방법이 있고,
 Mapper를 사용하는 방법이 있다.
 결국 둘다 resource 로 xml파일에 쿼리가 들어있다.
 이 xml에 Dao class 로 접근하느냐, Mapper interface로 접근하느냐의 차이이다.
 
- 
+spring:
+  datasource:
+    url: jdbc:sqlserver://{아이피:포트번호;databaseName=db명}
+    username : {계정}
+    password : {비밀번호}
+    driverClassName : com.microsoft.sqlserver.jdbc.SQLServerDriver
+
+jdbcTemplate
+SqlSessionTemplate 은 mybaties 에서 제공

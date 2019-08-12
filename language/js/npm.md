@@ -1,3 +1,6 @@
+npm install 옵션
+-D: --save-dev
+
 1. 초기화  
 `npm init --yes`
 
