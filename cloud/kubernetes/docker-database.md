@@ -8,9 +8,7 @@ docker run -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=yourStrong(!)Password' -p 1700:143
 docker ps -a
 
 ## SA 암호변경
-docker exec -it <컨테이너ID> /opt/mssql-tools/bin/sqlcmd \
-   -S localhost -U SA -P 'yourStrong(!)Password' \
-   -Q 'ALTER LOGIN SA WITH PASSWORD="<YourStrong!Passw0rd>"'
+docker exec -it <컨테이너ID> /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P 'yourStrong(!)Password' -Q 'ALTER LOGIN SA WITH PASSWORD="<YourStrong!Passw0rd>"'
 
 
 ## container 접속
@@ -31,3 +29,14 @@ insert into city (name, state, country) values ('San Francisco', 'CA', 'US');
 go
 
 select * from information_schema.tables -- 테이블 목록보기
+
+
+https://docs.microsoft.com/ko-kr/sql/linux/quickstart-install-connect-docker?view=sql-server-2017
+docker로 MSSQL을 설치히는 법
+
+
+
+# Oracle 설치
+
+오라클 express edition 11g release 2
+https://hub.docker.com/r/wnameless/oracle-xe-11g

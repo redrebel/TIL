@@ -1,5 +1,5 @@
 먼저 Vagrant의 기본 가상화 프로바이더인 VirtualBox를 설치  
- https://www.virtualbox.org
+https://www.virtualbox.org
 
 Vagrant 설치  
 https://www.vagrantup.com/downloads.html
@@ -9,7 +9,7 @@ Box란 Vagrant에서 가상 이미지로 사용할 수 있도록 초기 설정�
 https://atlas.hashicorp.com/boxes/search
 
 
-새로운 이미지 생성
+새로운 가상 인스턴스 생성
 - mkdir [폴더]: VM 이미지가 위치할 폴더 생성
 - vagrant init [이미지] : 초기화
 - vagrant up VM 실행
